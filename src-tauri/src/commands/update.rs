@@ -6,7 +6,7 @@ use tauri::{AppHandle, Emitter};
 /// Respects the update_checks_enabled config setting.
 #[tauri::command]
 pub fn trigger_update_check(app: AppHandle) -> Result<(), String> {
-    let config = crate::config::load_or_default();
+    let (config, _) = crate::config::load_or_default()?;
     if !config.general.update_checks_enabled {
         log::info!("Update checks disabled in config, skipping");
         return Ok(());

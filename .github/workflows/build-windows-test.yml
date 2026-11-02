@@ -11,6 +11,7 @@ on:
       - "package.json"
       - "src/lib/version.ts"
       - "src/**"
+      - "src-tauri/**"
 
 permissions:
   contents: read
@@ -44,6 +45,8 @@ jobs:
         run: bun run check
       - name: Test frontend
         run: bun run test
+      - name: Test persistence recovery
+        run: cargo test --manifest-path src-tauri/Cargo.toml --bin copyspeak persistence::tests -- --nocapture
       - name: Build unsigned Windows installer
         shell: pwsh
         run: |

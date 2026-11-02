@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.16] - 2026-11-02
+
+### Fixed
+
+- Register loaded config and history before creating webviews, preventing early
+  IPC requests from failing with "state not managed" during cold startup.
+- Save config, profiles and history through synced temporary files and atomic
+  replacement, retaining the previous valid JSON as a `.bak` file.
+- Recover unreadable or missing primary files from valid backups, preserving
+  damaged bytes locally. Stop startup with an error if recovery fails instead
+  of silently saving defaults or starting with empty history.
+- Disable automatic history cleanup after recovery, including later restarts
+  while a `.recovery` marker remains, and for sessions starting with empty
+  history. Missing indexes beside existing recordings no longer mean fresh data.
+- Save explicit settings resets atomically rather than deleting the config.
+
 ## [0.2.15] - 2026-10-22
 
 ### Fixed

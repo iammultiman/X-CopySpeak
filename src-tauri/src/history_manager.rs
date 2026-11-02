@@ -14,11 +14,11 @@ pub struct HistoryManager {
 
 impl HistoryManager {
     /// Create a new history manager, loading existing history from disk
-    pub fn new() -> Self {
-        let history = history::load();
-        Self {
+    pub fn new() -> Result<Self, String> {
+        let (history, _) = history::load()?;
+        Ok(Self {
             history: Mutex::new(history),
-        }
+        })
     }
 
     /// Create a new history manager with a specific history log
@@ -293,7 +293,7 @@ impl HistoryManager {
 
     /// Reload history from disk
     pub fn reload(&self) -> Result<(), String> {
-        let new_history = history::load();
+        let (new_history, _) = history::load()?;
         let mut hist = self.history.lock().map_err(|e| e.to_string())?;
         *hist = new_history;
         Ok(())
@@ -380,6 +380,6 @@ impl HistoryManager {
 
 impl Default for HistoryManager {
     fn default() -> Self {
-        Self::new()
+        Self::new().expect("History could not be loaded; refusing to start with empty history")
     }
 }

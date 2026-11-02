@@ -947,7 +947,7 @@ mod tests {
     #[ignore]
     fn live_caption_probe() {
         crate::secrets::load_dotenv();
-        let config = crate::config::load_or_default();
+        let (config, _) = crate::config::load_or_default().expect("Could not load config for live probe");
         let mut engine_config = config.tts.elevenlabs.clone();
         if let Some(profile) = config.tts.profiles.iter().find(|p| {
             p.engine == crate::config::TtsEngine::ElevenLabs && !p.voice.trim().is_empty()

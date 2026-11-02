@@ -18,6 +18,7 @@ mod hud;
 mod hud_layershell;
 mod logging;
 mod pagination;
+mod persistence;
 mod post_process;
 mod sanitize;
 mod secrets;
@@ -380,6 +381,19 @@ fn set_windows_app_user_model_id() {
 #[cfg(not(target_os = "windows"))]
 fn set_windows_app_user_model_id() {}
 
+fn report_startup_failure(error: &str) {
+    log::error!("{error}");
+    eprintln!("{error}");
+    #[cfg(windows)]
+    {
+        use windows::core::HSTRING;
+        use windows::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR, MB_OK};
+        let message = HSTRING::from(error);
+        let title = HSTRING::from("X-CopySpeak: saved data could not be loaded");
+        unsafe { MessageBoxW(None, &message, &title, MB_OK | MB_ICONERROR); }
+    }
+}
+
 fn main() {
     if let Err(e) = logging::init_logging() {
         eprintln!("Failed to initialize logging: {}", e);
@@ -414,11 +428,26 @@ fn main() {
     // missing until the app is restarted.
     commands::augment_path_for_local_engines();
 
+    let (cfg, config_recovered) = match config::load_or_default() {
+        Ok(loaded) => loaded,
+        Err(error) => {
+            report_startup_failure(&error);
+            return;
+        }
+    };
+    let (history, history_recovered) = match history::load() {
+        Ok(loaded) => loaded,
+        Err(error) => {
+            report_startup_failure(&error);
+            return;
+        }
+    };
+    let allow_automatic_cleanup = !config_recovered && !history_recovered && !history.entries().is_empty();
+
     tauri::Builder::default()
-        .setup(|app| {
-            // --- Load config ---
-            let cfg = config::load_or_default();
-            app.manage(std::sync::Mutex::new(cfg));
+        .manage(std::sync::Mutex::new(cfg))
+        .manage(std::sync::Mutex::new(history))
+        .setup(move |app| {
 
             // --- Wayland: configure the HUD as a layer surface (BEFORE first map) ---
             // On Wayland a toplevel cannot position itself (compositor owns
@@ -464,12 +493,9 @@ fn main() {
             }
             app.manage(std::sync::Mutex::new(player));
 
-            // --- Init speech history log ---
-            let history = history::load();
-            app.manage(std::sync::Mutex::new(history));
-
             // --- Init history manager (centralized history operations) ---
-            let history_manager = history_manager::HistoryManager::new();
+            let history = app.state::<std::sync::Mutex<history::HistoryLog>>();
+            let history_manager = history_manager::HistoryManager::with_history(history.lock().unwrap().clone());
             app.manage(std::sync::Mutex::new(history_manager));
 
             // --- Init cached audio state (for replay) ---
@@ -777,7 +803,11 @@ fn main() {
 
             // --- Start history cleanup service ---
             let app_handle_for_cleanup = app.handle().clone();
-            history::start_cleanup_service(app_handle_for_cleanup);
+            if allow_automatic_cleanup {
+                history::start_cleanup_service(app_handle_for_cleanup);
+            } else {
+                log::warn!("Automatic history cleanup disabled for this session: recovery or empty startup history");
+            }
 
             // --- Start browser bridge ---
             let app_handle_for_bridge = app.handle().clone();

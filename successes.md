@@ -1,5 +1,14 @@
 # X-CopySpeak: User-Confirmed Fixes
 
+## Settings Recovery From Previous Versions - 2026-11-02
+
+After a reboot, version 0.2.15 showed a managed-state startup error and missing
+settings, profiles and history. The user confirmed that restoring the data folder
+to a previous Windows version restored settings. This validates that recovery
+method, not a specific corruption cause or the new application fix. Restoration
+of history and profiles was not separately confirmed. The preventative startup
+and persistence changes in 0.2.16 still require Windows runtime validation.
+
 ## Edge Service Recovery - 2026-10-11
 
 The user retested Edge-TTS in their existing installation and confirmed it works

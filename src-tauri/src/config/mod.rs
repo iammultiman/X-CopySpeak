@@ -5,7 +5,7 @@
 /// exports). Tracks the app version (VERSION in src/lib/version.ts) and is
 /// refreshed by scripts/version-bumper.mjs alongside the other versioned
 /// files; load_or_default re-stamps loaded configs so old files catch up.
-const CONFIG_VERSION: &str = "0.2.15";
+const CONFIG_VERSION: &str = "0.2.16";
 
 /// The current config file version stamp (see `CONFIG_VERSION`).
 pub fn config_version() -> &'static str {
@@ -337,15 +337,12 @@ pub fn config_path() -> PathBuf {
     base.join("CopySpeak").join("config.json")
 }
 
-/// Load config from disk, or return defaults if missing/corrupt.
-pub fn load_or_default() -> AppConfig {
+/// Load config or its backup; defaults are allowed only when neither exists.
+pub fn load_or_default() -> Result<(AppConfig, bool), String> {
     let path = config_path();
-    match std::fs::read_to_string(&path) {
-        Ok(contents) => {
-            let mut cfg: AppConfig = serde_json::from_str(&contents).unwrap_or_else(|e| {
-                log::warn!("Config parse error, using defaults: {e}");
-                AppConfig::default()
-            });
+    let loaded = crate::persistence::load::<AppConfig>(&path)?;
+    match loaded.value {
+        Some(mut cfg) => {
 
             // Migrate legacy single-engine TTS config into the profile model.
             cfg.tts = migrate_tts_config(cfg.tts);
@@ -381,11 +378,14 @@ pub fn load_or_default() -> AppConfig {
             // `version` is informational (shown in exports); always reflect the
             // running app version so long-lived config files don't fossilize a
             // stale one. Persisted on the next save.
-            stamp_config_version(cfg)
+            Ok((stamp_config_version(cfg), loaded.recovered))
         }
-        Err(_) => {
+        None => {
+            if crate::history::history_path().try_exists().map_err(|error| error.to_string())? {
+                return Err("Settings are missing but existing history was found. Startup stopped to protect saved data; restore config.json or its backup before restarting.".into());
+            }
             log::info!("No config found at {}, using defaults", path.display());
-            AppConfig::default()
+            Ok((AppConfig::default(), false))
         }
     }
 }
@@ -400,11 +400,5 @@ fn stamp_config_version(mut config: AppConfig) -> AppConfig {
 
 /// Save config to disk. Creates parent directory if needed.
 pub fn save(config: &AppConfig) -> Result<(), String> {
-    let path = config_path();
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create config dir: {e}"))?;
-    }
-    let json = serde_json::to_string_pretty(config).map_err(|e| format!("Serialize error: {e}"))?;
-    std::fs::write(&path, json).map_err(|e| format!("Write error: {e}"))?;
-    Ok(())
+    crate::persistence::save(&config_path(), config)
 }

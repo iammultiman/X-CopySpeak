@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
 
 /// Reset configuration to factory defaults
-/// Deletes the config file and returns default settings
+/// Atomically saves factory defaults while retaining the previous config backup
 #[tauri::command]
 pub fn reset_config(
     config: State<'_, Mutex<AppConfig>>,
@@ -22,15 +22,7 @@ pub fn reset_config(
     // Create default config
     let default_config = AppConfig::default();
 
-    // Delete config file from disk
-    let path = config::config_path();
-    if path.exists() {
-        if let Err(e) = std::fs::remove_file(&path) {
-            log::error!("Failed to delete config file: {}", e);
-            return Err(format!("Failed to delete config file: {}", e));
-        }
-        log::info!("Deleted config file: {:?}", path);
-    }
+    config::save(&default_config)?;
 
     // Update in-memory state
     let mut cfg = config.lock().unwrap();

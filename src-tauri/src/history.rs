@@ -606,32 +606,31 @@ pub fn history_dir() -> PathBuf {
     base.join("CopySpeak").join("history")
 }
 
-/// Load history from disk, creating default if not found
-pub fn load() -> HistoryLog {
+/// Load history or its backup; unreadable files must never become empty history.
+pub fn load() -> Result<(HistoryLog, bool), String> {
     let path = history_path();
-    match std::fs::read_to_string(&path) {
-        Ok(contents) => serde_json::from_str(&contents).unwrap_or_else(|e| {
-            log::warn!("History parse error, starting fresh: {e}");
-            HistoryLog::new()
-        }),
-        Err(_) => {
+    let loaded = crate::persistence::load::<HistoryLog>(&path)?;
+    match loaded.value {
+        Some(history) => Ok((history, loaded.recovered)),
+        None => {
+            match std::fs::read_dir(history_dir()) {
+                Ok(mut entries) => {
+                    if entries.next().transpose().map_err(|error| error.to_string())?.is_some() {
+                        return Err("History index is missing but saved recordings exist. Startup stopped to protect recordings; restore history.json or its backup before restarting.".into());
+                    }
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(error) => return Err(format!("Cannot inspect saved history: {error}")),
+            }
             log::info!("No history found at {}, starting fresh", path.display());
-            HistoryLog::new()
+            Ok((HistoryLog::new(), false))
         }
     }
 }
 
 /// Save history to disk as JSON with pretty formatting
 pub fn save(history: &HistoryLog) -> Result<(), String> {
-    let path = history_path();
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create history dir: {e}"))?;
-    }
-    let json =
-        serde_json::to_string_pretty(history).map_err(|e| format!("Serialize error: {e}"))?;
-    std::fs::write(&path, json).map_err(|e| format!("Write error: {e}"))?;
-    Ok(())
+    crate::persistence::save(&history_path(), history)
 }
 
 /// Generate a unique history entry ID

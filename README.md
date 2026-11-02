@@ -1,6 +1,6 @@
 # X-CopySpeak
 
-**Current Version:** 0.2.15
+**Current Version:** 0.2.16
 
 A desktop app that reads clipboard text aloud using AI text-to-speech engines.
 Trigger speech by quickly copying the same text twice in a row. Fresh installs
