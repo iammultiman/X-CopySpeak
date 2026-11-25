@@ -1,6 +1,6 @@
 {
   "productName": "X-CopySpeak",
-  "version": "0.2.16",
+  "version": "0.2.17",
   "identifier": "com.copyspeak.tts",
   "build": {
     "frontendDist": "../dist",

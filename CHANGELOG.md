@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.17] - 2026-11-25
+
+### Added
+
+- Select Pocket TTS Small 1.9M or 6.9M in a Pocket profile. Existing profiles
+  without a model selection continue to use the runtime default.
+- Optionally install KittenTTS 2 Pico and Nano for CPU playback, with
+  model-specific voice choices and continued support for KittenTTS 0.8.
+
 ## [0.2.16] - 2026-11-02
 
 ### Fixed

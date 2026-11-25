@@ -30,6 +30,7 @@ param(
     # into this engine's uv project and verify it with a real CUDA synthesis.
     [switch]$Cuda,
     [switch]$SmokeTest,
+    [switch]$Kitten2,
     # App-driven voice selection: bypasses the interactive menu. The first id
     # is the profile-snippet default; all KittenTTS voices ship with the one
     # shared model, so -Voices only selects the default here.
@@ -66,7 +67,9 @@ $WheelUrl = "https://github.com/KittenML/KittenTTS/releases/download/0.8.1/kitte
 Write-Host ""
 Write-Host "  [STEP] engine" -ForegroundColor Yellow
 Write-Host "  Installing KittenTTS + soundfile..." -ForegroundColor Gray
-Invoke-Uv add --project $EngineDir $WheelUrl "soundfile"
+$dependencies = @($WheelUrl, "soundfile")
+if ($Kitten2) { $dependencies += "kittenml==0.9.8" }
+Invoke-Uv add --project $EngineDir @dependencies
 
 $scriptsDir = Join-Path $EngineDir "scripts"
 $voicesDir = Join-Path $EngineDir "voices"
@@ -110,6 +113,13 @@ if ($SmokeTest) {
     $testOut = Join-Path $outputDir "test.wav"
     Invoke-Uv run --project $EngineDir python "$dstWrapper" --text "Hello from Kitten TTS" --voice $chosenVoice --output "$testOut"
     if (-not (Test-AudioFile -Path $testOut)) { Write-Host "  Smoke test FAILED." -ForegroundColor Red; exit 1 }
+    if ($Kitten2) {
+        foreach ($model in @("pico", "nano")) {
+            $modelOutput = Join-Path $outputDir "test-$model.wav"
+            Invoke-Uv run --project $EngineDir python "$dstWrapper" --model "KittenML/kitten-tts-2-$model" --voice Eleanor --text "Hello from Kitten TTS 2" --output "$modelOutput"
+            if (-not (Test-AudioFile -Path $modelOutput)) { exit 1 }
+        }
+    }
 }
 
 $profileJson = @"

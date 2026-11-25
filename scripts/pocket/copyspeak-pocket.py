@@ -172,6 +172,7 @@ def main() -> int:
     parser.add_argument("--text", help="Inline text to synthesize")
     parser.add_argument("--text-file", help="Path to a UTF-8 text file to synthesize")
     parser.add_argument("--voice", default="alba", help="Pocket voice name, or a path to a wav/safetensors prompt")
+    parser.add_argument("--model", choices=["english_2m_2026-10", "english_7m_2026-10"], help="Optional Pocket Small checkpoint")
     parser.add_argument("--output", help="Output WAV file path (required unless --serve)")
     parser.add_argument("--serve", action="store_true", help="Keep the model in RAM and read JSON requests on stdin")
     parser.add_argument("--device", default="cpu", choices=["cpu", "cuda"], help="Inference device")
@@ -196,7 +197,7 @@ def main() -> int:
         return 1
 
     try:
-        model = TTSModel.load_model()
+        model = TTSModel.load_model(language=args.model) if args.model else TTSModel.load_model()
         if args.device == "cuda":
             import torch
 

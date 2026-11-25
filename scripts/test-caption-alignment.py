@@ -3,10 +3,11 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 
 def load(relative):
@@ -19,6 +20,41 @@ def load(relative):
 piper = load("piper/copyspeak-piper.py")
 edge = load("edge/copyspeak-edge.py")
 kokoro = load("kokoro/copyspeak-kokoro.py")
+kitten = load("kitten/copyspeak-kitten.py")
+pocket = load("pocket/copyspeak-pocket.py")
+
+
+class ModelSelectionTests(unittest.TestCase):
+    def test_pocket_model_selection_preserves_default_and_passes_checkpoint(self):
+        for checkpoint in (None, "english_2m_2026-10", "english_7m_2026-10"):
+            with self.subTest(checkpoint=checkpoint):
+                loader = Mock()
+                args = ["pocket", "--serve"]
+                if checkpoint:
+                    args.extend(["--model", checkpoint])
+                with patch.dict(sys.modules, pocket_tts=SimpleNamespace(TTSModel=loader)), \
+                        patch.object(sys, "argv", args), patch.object(pocket, "serve", return_value=0):
+                    self.assertEqual(pocket.main(), 0)
+                loader.load_model.assert_called_once_with(**({"language": checkpoint} if checkpoint else {}))
+                loader.load_model.return_value.get_state_for_audio_prompt.assert_called_once_with("alba")
+
+    def test_kitten_dispatches_both_cpu_onnx_models_and_preserves_legacy_loader(self):
+        modern = Mock()
+        legacy = Mock()
+        with patch.dict(sys.modules, kittenml=SimpleNamespace(KittenTTS=modern),
+                        kittentts=SimpleNamespace(KittenTTS=legacy)):
+            for family in ("pico", "nano"):
+                model_id = f"KittenML/kitten-tts-2-{family}"
+                adapter, session = kitten.load_engine(model_id, "cpu")
+                self.assertIsNone(session)
+                modern.assert_called_with(model_id, backend="onnx", device="cpu")
+                adapter.generate("Hello", "Eleanor", 1.1, clean_text=True)
+                modern.return_value.generate.assert_called_with("Hello", voice="Eleanor", speed=1.1)
+                with self.assertRaisesRegex(ValueError, "require CPU"):
+                    kitten.load_engine(model_id, "cuda")
+            model, _ = kitten.load_engine("KittenML/kitten-tts-nano-0.8", "cpu")
+            self.assertIs(model, legacy.return_value)
+            legacy.assert_called_once_with("KittenML/kitten-tts-nano-0.8")
 
 
 class AlignmentTests(unittest.TestCase):

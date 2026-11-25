@@ -70,7 +70,7 @@ log C_YELLOW "  [STEP] engine"
 log C_GRAY "  Installing pocket-tts..."
 # Linux PyPI torch wheels are the CUDA build, so no extra index is needed
 # here; --cuda swaps in pinned CUDA builds below.
-invoke_uv add --project "$ENGINE_DIR" "pocket-tts"
+invoke_uv add --project "$ENGINE_DIR" "pocket-tts==4.0.1"
 
 SCRIPTS_DIR="$ENGINE_DIR/scripts"
 OUTPUT_DIR="$ENGINE_DIR/output"

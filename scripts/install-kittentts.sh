@@ -16,10 +16,11 @@ source "$SCRIPT_DIR/lib/copyspeak-engine-install.sh"
 FORCE=0
 CUDA=0
 SMOKE_TEST=0
+KITTEN2=0
 VOICES=()
 
 usage() {
-    echo "Usage: ./scripts/install-kittentts.sh [--force] [--cuda] [--smoke-test] [--voices <id> [<id>...]]"
+    echo "Usage: ./scripts/install-kittentts.sh [--force] [--cuda] [--kitten2] [--smoke-test] [--voices <id> [<id>...]]"
 }
 
 while (( $# > 0 )); do
@@ -27,6 +28,7 @@ while (( $# > 0 )); do
         --force) FORCE=1; shift ;;
         --cuda) CUDA=1; shift ;;
         --smoke-test) SMOKE_TEST=1; shift ;;
+        --kitten2) KITTEN2=1; shift ;;
         --voices)
             shift
             # Voice ids never start with "--"; the next flag (or arg end)
@@ -69,7 +71,11 @@ WHEEL_URL="https://github.com/KittenML/KittenTTS/releases/download/0.8.1/kittent
 echo ""
 log C_YELLOW "  [STEP] engine"
 log C_GRAY "  Installing KittenTTS + soundfile..."
-invoke_uv add --project "$ENGINE_DIR" "$WHEEL_URL" "soundfile"
+DEPENDENCIES=("$WHEEL_URL" "soundfile")
+if (( KITTEN2 )); then
+    DEPENDENCIES+=("kittenml==0.9.8")
+fi
+invoke_uv add --project "$ENGINE_DIR" "${DEPENDENCIES[@]}"
 
 SCRIPTS_DIR="$ENGINE_DIR/scripts"
 VOICES_DIR="$ENGINE_DIR/voices"
@@ -120,6 +126,14 @@ if (( SMOKE_TEST )); then
     if ! test_audio_file "$TEST_OUT"; then
         log C_RED "  Smoke test FAILED."
         exit 1
+    fi
+    if (( KITTEN2 )); then
+        for MODEL in pico nano; do
+            invoke_uv run --project "$ENGINE_DIR" python "$DST_WRAPPER" \
+                --model "KittenML/kitten-tts-2-$MODEL" --voice Eleanor \
+                --text "Hello from Kitten TTS 2" --output "$OUTPUT_DIR/test-$MODEL.wav"
+            test_audio_file "$OUTPUT_DIR/test-$MODEL.wav" || exit 1
+        done
     fi
 fi
 

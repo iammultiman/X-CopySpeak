@@ -40,6 +40,7 @@
   let voices = $state<VoiceCatalogEntry[]>([]);
   let supportsCuda = $state(false);
   let cuda = $state(false);
+  let kitten2 = $state(false);
   let installed = $state<Set<string>>(new Set());
   let isInstalled = $state(false);
   let selected = $state<Set<string>>(new Set());
@@ -125,7 +126,8 @@
       await invoke("install_engine", {
         engine: engineId,
         voice: ids.length > 0 ? ids : null,
-        cuda
+        cuda,
+        kitten2
       });
     } catch (e) {
       toast.error(`${$_("engines.installFailed")}: ${e}`);
@@ -230,6 +232,13 @@
             </li>
           {/each}
         </ul>
+      {/if}
+
+      {#if engineId === "kitten"}
+        <label class="border-border flex items-center gap-2 rounded border p-3 text-sm">
+          <input type="checkbox" bind:checked={kitten2} disabled={busy} />
+          Include KittenTTS 2 Pico and Nano
+        </label>
       {/if}
 
       {#if supportsCuda}

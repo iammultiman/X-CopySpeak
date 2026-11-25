@@ -66,7 +66,7 @@ Write-Host "  [STEP] engine" -ForegroundColor Yellow
 Write-Host "  Installing pocket-tts..." -ForegroundColor Gray
 # Windows PyPI torch wheels are already CPU-only, so no extra index is needed
 # here; -Cuda swaps in a CUDA build below.
-Invoke-Uv add --project $EngineDir "pocket-tts"
+Invoke-Uv add --project $EngineDir "pocket-tts==4.0.1"
 
 $scriptsDir = Join-Path $EngineDir "scripts"
 $outputDir = Join-Path $EngineDir "output"

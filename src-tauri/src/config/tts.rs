@@ -547,6 +547,8 @@ pub struct KokoroEngineOptions {
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PocketEngineOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
     /// Run inference on an NVIDIA GPU. Pocket is a PyTorch model, so this moves
     /// the module with `.to("cuda")` rather than switching an ONNX provider.
     #[serde(default)]

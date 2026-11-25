@@ -37,6 +37,7 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 
 ## Active failure log
 
+- Verify KittenTTS 2 options against the pinned wheel: `kittenml` 0.9.8 accepts `weights` at the generic entry point but does not forward it to Pico or Nano. Do not advertise INT4 with this pin.
 - Register config/history before webviews; atomically persist both with last-good backups, fail closed on unreadable data, and never start automatic cleanup after recovery or with empty startup history.
 - Type component props as `let { ... }: Props = $props()`; generic `$props<Props>()` fails on clean Windows installs and can hide invalid component contracts locally.
 - Preserve `browser_reading_id` from queued synthesis through batch fragments and scheduled PCM positions; never infer browser ownership from active-session state, matching text, or fragment index when Queue After Current leaves desktop audio playing.

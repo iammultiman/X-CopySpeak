@@ -136,6 +136,8 @@ fn first_class_local_cli(engine: &TtsEngine) -> Option<(String, Vec<String>)> {
                 "{voice}",
                 "--output",
                 "{output}",
+                "--model",
+                "{model}",
             ],
         ),
         _ => return None,
@@ -225,6 +227,9 @@ pub(crate) fn create_backend_from_effective(
             }
             if let Some(speed) = eff.engine_options.kitten().and_then(|o| o.speed) {
                 backend.speed = Some(speed);
+            }
+            if let ProfileEngineOptions::Pocket(options) = &eff.engine_options {
+                backend.model = options.model.clone().filter(|model| !model.trim().is_empty());
             }
             backend.cuda = eff.engine_options.cuda();
             Box::new(backend)

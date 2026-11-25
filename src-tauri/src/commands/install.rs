@@ -286,6 +286,7 @@ pub fn install_engine(
     engine: String,
     voice: Option<Vec<String>>,
     cuda: bool,
+    kitten2: Option<bool>,
 ) -> Result<(), String> {
     let filename = installer_script_for(&engine)?;
     let script_path = resolve_script(&app, filename)?;
@@ -294,7 +295,10 @@ pub fn install_engine(
         script_path.display()
     );
 
-    let args = installer_args(voice.as_deref(), cuda);
+    let mut args = installer_args(voice.as_deref(), cuda);
+    if engine == "kitten" && kitten2 == Some(true) {
+        args.push(if cfg!(windows) { "-Kitten2" } else { "--kitten2" }.into());
+    }
 
     spawn_streamed(app, engine, &script_path, &args)
 }

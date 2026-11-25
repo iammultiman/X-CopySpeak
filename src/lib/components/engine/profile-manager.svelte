@@ -246,7 +246,7 @@
       if (preset === "custom") return rawVoices;
       return [];
     }
-    return rawVoices;
+    return profileVoices(active);
   });
 
   const showPicker = $derived(
@@ -349,6 +349,44 @@
 
   function catalogVoicesFor(engine: TtsEngine): VoiceCatalogEntry[] {
     return voicesByEngine[engine] ?? [];
+  }
+
+  function isKitten2Model(model: EngineOptionValue | undefined): boolean {
+    return model === "KittenML/kitten-tts-2-pico" || model === "KittenML/kitten-tts-2-nano";
+  }
+
+  function profileVoices(profile: VoiceProfile): VoiceCatalogEntry[] {
+    const model = profile.engine_options.model;
+    const catalog = catalogVoicesFor(profile.engine);
+    if (profile.engine === "pocket" && model) {
+      return catalog.filter((voice) => voice.language === "en");
+    }
+    if (profile.engine !== "kitten" || !isKitten2Model(model)) {
+      return catalog;
+    }
+    const pico = model === "KittenML/kitten-tts-2-pico";
+    const languages = {
+      en: pico
+        ? "Eleanor Edith Otis Frank"
+        : "Eleanor Martha Serena Iris Grace Edith Otis Vincent Max Danny",
+      de: "Anna Mia Lukas Paul",
+      es: "Sofia Elena Pablo Mateo",
+      it: "Francesca Alessandro Giorgio Davide",
+      pt: "Juliana Larissa Gustavo Caio",
+      ru: "Olga Tatiana Sergei Alexei",
+      hi: pico ? "Priya Arjun" : "Priya Ananya Arjun Vikram",
+      fr: pico ? "Amelie Lea Theo Baptiste" : "Juliette Gabriel Nicolas"
+    };
+    return Object.entries(languages).flatMap(([language, names]) =>
+      names.split(" ").map((name) => ({
+        id: name,
+        label: name,
+        language,
+        description: null,
+        gender: null,
+        preview_url: null
+      }))
+    );
   }
 
   function applyPresetDefaults(index: number, preset: EngineOptionValue) {
@@ -457,6 +495,21 @@
 
     profile.engine_options = updatedOptions;
 
+    if (key === "model" && profile.engine === "pocket" && value) {
+      const currentVoice = catalogVoicesFor("pocket").find((voice) => voice.id === profile.voice);
+      if (currentVoice && currentVoice.language !== "en") setVoice(index, "alba");
+    }
+
+    if (key === "model" && profile.engine === "kitten") {
+      if (isKitten2Model(value)) {
+        profile.engine_options.cuda = false;
+      }
+      const voices = profileVoices(profile);
+      if (voices[0] && !voices.some((voice) => voice.id === profile.voice)) {
+        setVoice(index, voices[0].id);
+      }
+    }
+
     if (profile.engine === "local" && key === "preset") {
       applyPresetDefaults(index, value);
     }
@@ -465,7 +518,7 @@
   function setVoice(index: number, voiceId: string) {
     const profile = localConfig.tts.profiles[index];
     profile.voice = voiceId;
-    const match = catalogVoicesFor(profile.engine).find((voice) => voice.id === voiceId);
+    const match = profileVoices(profile).find((voice) => voice.id === voiceId);
     profile.voice_label = match?.label ?? null;
   }
 
@@ -840,6 +893,9 @@
                       { value: "false", label: "Disabled" }
                     ]}
                     value={String(Boolean(optionValue(active, option)))}
+                    disabled={option.key === "cuda" &&
+                      active.engine === "kitten" &&
+                      isKitten2Model(active.engine_options.model)}
                     onchange={(e) =>
                       setOptionValue(
                         activeIndex,
@@ -850,7 +906,15 @@
                   />
                 {:else if option.kind === "select"}
                   <Select
-                    options={(option.choices ?? []).map((c) => ({ value: c, label: c }))}
+                    options={(option.choices ?? []).map((choice) => ({
+                      value: choice,
+                      label:
+                        choice === "english_2m_2026-10"
+                          ? "Pocket Small 1.9M"
+                          : choice === "english_7m_2026-10"
+                            ? "Pocket Small 6.9M"
+                            : choice || "Default"
+                    }))}
                     value={String(optionValue(active, option) ?? "")}
                     onchange={(e) => {
                       const val = (e.target as HTMLSelectElement).value;

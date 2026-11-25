@@ -143,13 +143,15 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                 select_option(
                     "model",
                     "Model",
-                    "Model size — nano is the fast default, mini sounds best, int8 is upstream-buggy.",
+                    "Kitten 0.8 remains the default. Kitten 2 Pico and Nano require the optional runtime and use CPU ONNX.",
                     serde_json::json!("KittenML/kitten-tts-nano-0.8"),
                     vec![
                         "KittenML/kitten-tts-nano-0.8",
                         "KittenML/kitten-tts-micro-0.8",
                         "KittenML/kitten-tts-mini-0.8",
                         "KittenML/kitten-tts-nano-0.8-int8",
+                        "KittenML/kitten-tts-2-pico",
+                        "KittenML/kitten-tts-2-nano",
                     ],
                 ),
                 option(
@@ -285,20 +287,29 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             engine: TtsEngine::Pocket,
             label: "Pocket".into(),
             description:
-                "Free local TTS via Kyutai Pocket — 100M params, built for CPU, many voices."
+                "Free local TTS via Kyutai Pocket with optional 1.9M and 6.9M English checkpoints."
                     .into(),
             docs_url: "https://github.com/kyutai-labs/pocket-tts".into(),
             supports_voice_refresh: false,
             supports_pitch: false,
             supports_captions: false,
             supports_bracket_emotes: false,
-            options: vec![option(
-                "cuda",
-                "GPU acceleration",
-                EngineOptionKind::Boolean,
-                "Run inference on an NVIDIA GPU. Requires the engine's GPU runtime (install with -Cuda).",
-                serde_json::json!(false),
-            )],
+            options: vec![
+                select_option(
+                    "model",
+                    "Model",
+                    "Use Default for the runtime default. Small checkpoints are English-only and require an updated Pocket install.",
+                    serde_json::json!(null),
+                    vec!["", "english_2m_2026-10", "english_7m_2026-10"],
+                ),
+                option(
+                    "cuda",
+                    "GPU acceleration",
+                    EngineOptionKind::Boolean,
+                    "Run inference on an NVIDIA GPU. Requires the engine's GPU runtime (install with -Cuda).",
+                    serde_json::json!(false),
+                ),
+            ],
             voices: vec![
                 voice("alba", "Alba", Some("en"), None, Some("female")),
                 voice("anna", "Anna", Some("en"), None, Some("female")),

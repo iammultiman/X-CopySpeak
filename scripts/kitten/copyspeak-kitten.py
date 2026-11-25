@@ -189,6 +189,17 @@ def pcm16(samples) -> bytes:
     return (clipped * 32767.0).astype("<i2").tobytes()
 
 
+KITTEN_2_MODELS = {"KittenML/kitten-tts-2-pico", "KittenML/kitten-tts-2-nano"}
+
+
+class Kitten2Adapter:
+    def __init__(self, model):
+        self.model = model
+
+    def generate(self, text, voice, speed, clean_text=True):
+        return self.model.generate(text, voice=voice, speed=speed)
+
+
 def load_engine(model_name: str, device: str):
     """Build a KittenTTS and return it with the ONNX session it ended up using.
 
@@ -197,6 +208,15 @@ def load_engine(model_name: str, device: str):
     selected by swapping the session afterwards. Both `model` and `session` are
     public attributes of the object, and CPU never touches this path.
     """
+    if model_name in KITTEN_2_MODELS:
+        if device != "cpu":
+            raise ValueError("KittenTTS 2 Pico and Nano currently require CPU mode in CopySpeak")
+        with contextlib.redirect_stdout(sys.stderr):
+            from kittenml import KittenTTS
+
+            model = KittenTTS(model_name, backend="onnx", device="cpu")
+        return Kitten2Adapter(model), None
+
     from kittentts import KittenTTS
 
     # Model load (and any progress output HF prints for a first download) must
@@ -368,14 +388,12 @@ def main() -> int:
         enable_cuda_dlls()
 
     try:
-        import kittentts  # noqa: F401  (imported for its side effect: the check)
+        tts, session = load_engine(args.model, args.device)
     except ImportError as exc:  # pragma: no cover - environment dependent
         print(f"ERROR: missing dependency: {exc}", file=sys.stderr)
-        print("Reinstall with: ./scripts/install-kittentts.ps1 -Force", file=sys.stderr)
+        flag = " -Kitten2" if args.model in KITTEN_2_MODELS else ""
+        print(f"Install with: ./scripts/install-kittentts.ps1{flag}", file=sys.stderr)
         return 1
-
-    try:
-        tts, session = load_engine(args.model, args.device)
     except Exception as exc:  # pragma: no cover - environment dependent
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

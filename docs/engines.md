@@ -86,6 +86,21 @@ Manual run (if you prefer the terminal):
 
 ### Resident models
 
+To try **Pocket Small 1.9M or 6.9M**, install or reinstall Pocket from the
+Engines page without deleting its existing project. Then select the model in a
+Pocket profile and choose an English voice such as Alba. The updated installer
+uses `pocket-tts==4.0.1`. Model files download on first use. The app still
+generates each Pocket request as a batch; native incremental generation is not
+part of this update.
+
+To try **KittenTTS 2 Pico or Nano**, select **Include KittenTTS 2 Pico and
+Nano** in the Kitten installer, or pass `-Kitten2` on Windows or `--kitten2`
+on Linux. Then select Pico or Nano and a compatible voice in a Kitten profile.
+Both use CPU ONNX with the pinned runtime's default INT8 graphs, not INT4.
+Model files download as needed for the selected language. The optional
+`kittenml` runtime installs additional dependencies including PyTorch, so the
+graph size alone is not the total install size.
+
 Every local engine keeps its model in RAM between utterances. CopySpeak starts
 one wrapper process per engine in `--serve` mode at launch and talks to it over
 a pipe. Each wrapper also synthesizes a throwaway phrase before reporting ready,
